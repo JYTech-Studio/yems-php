@@ -21,15 +21,11 @@
 
 ## 畫面截圖
 
-> 之後把圖檔放進 `docs/screenshots/`，再把下面註解打開即可顯示。
-
-<!--
 | 總覽 Dashboard | 刷卡點名工作檯 |
 |:---:|:---:|
 | ![Dashboard](docs/screenshots/dashboard.png) | ![Check-in](docs/screenshots/checkin.png) |
-| 點數帳戶 | 家長 Portal（mobile） |
-| ![Credits](docs/screenshots/credits.png) | ![Parent Portal](docs/screenshots/portal.png) |
--->
+| **點數帳戶（儲值 / 扣點 / 餘額）** | **家長 Portal（手機版・無登入 token）** |
+| ![Credits](docs/screenshots/credits.png) | <img src="docs/screenshots/portal.png" width="280"> |
 
 ## 功能模組（9 個後台 + 家長 Portal）
 
