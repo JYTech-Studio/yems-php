@@ -58,6 +58,52 @@
 | 匯出 | PhpSpreadsheet（XLSX）+ 自寫 CSV（UTF-8 BOM、Excel 中文不亂碼） |
 | 測試 | PHPUnit Feature 測試 **52 項全綠**（頁面渲染、點數一致性、角色權限、Portal 存取控制） |
 
+## 專案結構
+
+```
+app/
+├── Http/
+│   ├── Controllers/      # 後台 + Portal（Account / Student / Course / Credit / Attendance …）
+│   └── Middleware/
+│       └── EnsureAdmin.php        # 角色守門：僅 admin 可進管理頁
+├── Models/               # 13 個 Eloquent 模型（皆用 UUID 主鍵）
+│   ├── User.php                   # 統一帳號表，role = admin / teacher / parent / student
+│   ├── Course.php / CourseSchedule.php
+│   ├── Enrollment.php             # 報名（學生 × 課程，點數帳戶掛在這）
+│   ├── CreditTransaction.php      # 點數異動全紀錄（儲值 / 扣點 / 調整）
+│   ├── RfidCard.php / AttendanceRecord.php
+│   ├── LeaveRecord.php
+│   ├── LessonLog.php / LessonLogPhoto.php / StudentContactBook.php
+│   ├── StudentParent.php          # 家長 ⇄ 學生多對多綁定
+│   └── ParentAccessToken.php      # 家長 Portal 的無登入 token
+└── Services/             # 商業邏輯抽離 Controller，包在 DB transaction 內
+    ├── CreditService.php          # 扣點 / 儲值 / 調整，lockForUpdate 防併發超扣
+    └── AttendanceService.php      # 刷卡進退場判定、自動扣點、防重複刷
+
+database/migrations/      # 13 張業務資料表，與 SQLite / PostgreSQL 皆相容
+resources/views/          # Blade 模板（後台 layout + 家長 Portal mobile-first）
+routes/web.php            # 路由（含 /p/{token} Portal 無登入路由）
+tests/Feature/            # PHPUnit Feature 測試 52 項
+```
+
+## 資料庫資料表（13 張）
+
+| 資料表 | 用途 |
+|--------|------|
+| `users` | 統一帳號表，以 `role` 區分 admin / teacher / parent / student |
+| `student_parents` | 家長 ⇄ 學生多對多綁定 |
+| `courses` | 課程（每堂扣點、所屬類別） |
+| `course_schedules` | 固定課表（星期 / 時段 / 教室） |
+| `enrollments` | 報名（學生 × 課程），點數餘額掛在報名上 |
+| `credit_transactions` | 點數異動全紀錄（儲值 / 扣點 / 手動調整，含原價・實收・折扣） |
+| `rfid_cards` | 學生 RFID 卡片綁定 |
+| `attendance_records` | 刷卡進退場出席紀錄 |
+| `leave_records` | 請假與補課狀態 |
+| `lesson_logs` | 上課紀錄（每堂課） |
+| `lesson_log_photos` | 上課照片（disk 由設定切換，部署改 S3） |
+| `student_contact_books` | 學生聯絡簿 |
+| `parent_access_tokens` | 家長 Portal 無登入存取 token（可停用 / 設效期） |
+
 ## 本地啟動
 
 ```bash
