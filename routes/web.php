@@ -75,6 +75,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('students/{student}', [StudentController::class, 'destroy'])->name('students.destroy');
         Route::delete('parents/{parent}', [ParentController::class, 'destroy'])->name('parents.destroy');
         Route::delete('courses/{course}', [CourseController::class, 'destroy'])->name('courses.destroy');
+        Route::delete('attendance/{record}', [AttendanceController::class, 'cancel'])->name('attendance.cancel');
         Route::resource('accounts', AccountController::class)->except('show');
     });
 

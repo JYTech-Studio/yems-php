@@ -82,6 +82,71 @@ class SmokeTest extends TestCase
         $this->assertDatabaseCount('attendance_records', 0);
     }
 
+    public function test_cancel_checkin_refunds_credit(): void
+    {
+        $admin = $this->admin();
+        $student = $this->student();
+        $course = $this->course();
+        $enrollment = Enrollment::create(['student_id' => $student->id, 'course_id' => $course->id, 'credits_remaining' => 3]);
+
+        $record = app(AttendanceService::class)->checkIn($student, $enrollment);
+        $this->assertEquals(2, $enrollment->fresh()->credits_remaining);
+
+        $result = app(AttendanceService::class)->cancelAttendance($record, $admin);
+
+        $this->assertTrue($result['refunded']);
+        $this->assertEquals(3, $enrollment->fresh()->credits_remaining);          // 點數退回
+        $this->assertDatabaseMissing('attendance_records', ['id' => $record->id]); // 紀錄已刪
+        $this->assertDatabaseHas('credit_transactions', [                          // 寫退點稽核，指向被刪 record
+            'enrollment_id' => $enrollment->id, 'tx_type' => 'manual_add', 'amount' => 1, 'reference_id' => $record->id,
+        ]);
+    }
+
+    public function test_cancel_checkout_does_not_touch_credits(): void
+    {
+        $admin = $this->admin();
+        $student = $this->student();
+        $course = $this->course();
+        $enrollment = Enrollment::create(['student_id' => $student->id, 'course_id' => $course->id, 'credits_remaining' => 5]);
+
+        $checkout = app(AttendanceService::class)->checkOut($student, $enrollment);
+        $result = app(AttendanceService::class)->cancelAttendance($checkout, $admin);
+
+        $this->assertFalse($result['refunded']);
+        $this->assertEquals(5, $enrollment->fresh()->credits_remaining);           // 點數不變
+        $this->assertDatabaseMissing('attendance_records', ['id' => $checkout->id]);
+    }
+
+    public function test_cancel_checkin_blocked_when_checkout_exists(): void
+    {
+        $student = $this->student();
+        $course = $this->course();
+        $enrollment = Enrollment::create(['student_id' => $student->id, 'course_id' => $course->id, 'credits_remaining' => 3]);
+
+        $checkin = app(AttendanceService::class)->checkIn($student, $enrollment);
+        $this->travel(5)->minutes();                                    // 簽退一定晚於簽到
+        app(AttendanceService::class)->checkOut($student, $enrollment); // 之後產生對應簽退
+        $this->travelBack();
+
+        $this->expectException(\RuntimeException::class);
+        app(AttendanceService::class)->cancelAttendance($checkin, $this->admin());
+    }
+
+    public function test_only_admin_can_cancel_attendance(): void
+    {
+        $student = $this->student();
+        $course = $this->course();
+        $enrollment = Enrollment::create(['student_id' => $student->id, 'course_id' => $course->id, 'credits_remaining' => 3]);
+        $record = app(AttendanceService::class)->checkIn($student, $enrollment);
+
+        $teacher = User::create(['role' => 'teacher', 'name' => '老師', 'email' => 't@t.com', 'password' => bcrypt('x')]);
+        $this->actingAs($teacher)->delete(route('attendance.cancel', $record))->assertForbidden();
+
+        // 老師被擋下，紀錄仍在、點數沒退
+        $this->assertDatabaseHas('attendance_records', ['id' => $record->id]);
+        $this->assertEquals(2, $enrollment->fresh()->credits_remaining);
+    }
+
     // === Phase B ===
     public function test_phase_b_pages_render(): void
     {

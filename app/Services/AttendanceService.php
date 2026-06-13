@@ -103,6 +103,76 @@ class AttendanceService
         });
     }
 
+    /**
+     * 作廢出席紀錄（鎖定 + 刪除 + 退點，同一交易）— 對齊 yems 的 fn_cancel_attendance RPC。
+     * - check_out：直接刪，不影響點數。
+     * - check_in 無 enrollment：僅刪，不調整點數。
+     * - check_in 有 enrollment：若已有對應簽退則擋下；否則刪紀錄 + 退 1 點 + 寫 manual_add 稽核。
+     * 任何一步丟例外都會整筆 rollback，不會出現「已刪但沒退點」的半套狀態。
+     *
+     * @return array{record_type:string, refunded:bool, credits_remaining:?int, note:?string}
+     */
+    public function cancelAttendance(AttendanceRecord $record, User $performer): array
+    {
+        return DB::transaction(function () use ($record, $performer) {
+            // 鎖住該 row：重複請求時後到者等第一個 commit 後重判，row 已刪 → findOrFail 丟例外，不會重複退點。
+            $locked = AttendanceRecord::lockForUpdate()->findOrFail($record->id);
+
+            // (1) 簽退：直接刪，不動點數
+            if ($locked->record_type === 'check_out') {
+                $locked->delete();
+
+                return ['record_type' => 'check_out', 'refunded' => false, 'credits_remaining' => null, 'note' => null];
+            }
+
+            // (2) 簽到但無 enrollment：僅刪
+            if (! $locked->enrollment_id) {
+                $locked->delete();
+
+                return ['record_type' => 'check_in', 'refunded' => false, 'credits_remaining' => null,
+                    'note' => '此簽到紀錄沒有關聯點數帳戶，僅刪除紀錄，未調整點數'];
+            }
+
+            // (3) 簽到且有 enrollment：先確認沒有對應的簽退卡在中間
+            $nextCheckIn = AttendanceRecord::where('student_id', $locked->student_id)
+                ->where('enrollment_id', $locked->enrollment_id)
+                ->where('record_type', 'check_in')
+                ->where('recorded_at', '>', $locked->recorded_at)
+                ->orderBy('recorded_at')->value('recorded_at');
+
+            $blocking = AttendanceRecord::where('student_id', $locked->student_id)
+                ->where('enrollment_id', $locked->enrollment_id)
+                ->where('record_type', 'check_out')
+                ->where('recorded_at', '>', $locked->recorded_at)
+                ->when($nextCheckIn, fn ($q) => $q->where('recorded_at', '<', $nextCheckIn))
+                ->exists();
+
+            if ($blocking) {
+                throw new RuntimeException('此簽到已有對應簽退，請先取消簽退後再取消簽到');
+            }
+
+            $enrollment = Enrollment::lockForUpdate()->findOrFail($locked->enrollment_id);
+            $locked->delete();
+
+            // 退 1 點 + 寫稽核（reference_id 指向已刪 attendance id 作為審計線索）
+            $enrollment->increment('credits_remaining');
+            $enrollment->refresh();
+
+            \App\Models\CreditTransaction::create([
+                'enrollment_id' => $enrollment->id,
+                'tx_type'       => 'manual_add',
+                'amount'        => 1,
+                'balance_after' => $enrollment->credits_remaining,
+                'note'          => '取消簽到退回點數',
+                'performed_by'  => $performer->id,
+                'reference_id'  => $record->id,
+            ]);
+
+            return ['record_type' => 'check_in', 'refunded' => true,
+                'credits_remaining' => $enrollment->credits_remaining, 'note' => null];
+        });
+    }
+
     /** 簽退：僅記錄，不扣點。 */
     public function checkOut(User $student, ?Enrollment $enrollment, ?RfidCard $card = null, bool $isManual = false): AttendanceRecord
     {

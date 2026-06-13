@@ -37,7 +37,7 @@
 | **家長管理** | 家長 ⇄ 學生綁定、產生家長 Portal 存取連結（token） |
 | **課程管理** | CRUD、每堂扣點、固定課表（星期 / 時段 / 教室） |
 | **點數帳戶** | 儲值 / 扣點 / 手動調整；含原價・實收・折扣；異動全記錄，包在 DB transaction 內 |
-| **刷卡點名工作檯** | 模擬 RFID 刷卡 → 自動判定進 / 退場、扣點、60 秒防重複刷 |
+| **刷卡點名工作檯** | 模擬 RFID 刷卡 → 自動判定進 / 退場、扣點、60 秒防重複刷；管理員可**作廢紀錄並退回扣點**（刪除 + 退點同一 transaction）|
 | **聯絡簿 + 上課紀錄** | 每堂課紀錄 + 照片上傳（disk 由設定切換，部署改 Supabase S3）|
 | **請假管理** | 後台登記 / 家長線上請假、補課狀態 |
 | **報表** | 點數異動・請假紀錄匯出 **CSV（含 UTF-8 BOM）/ Excel（XLSX）**、財務統計 |
@@ -56,7 +56,7 @@
 | 權限 | 自訂 `EnsureAdmin` middleware + 角色（admin / teacher / parent / student） |
 | 檔案 | Laravel Storage，disk 由 `FILESYSTEM_DISK` 切換（本地 public / 線上 S3） |
 | 匯出 | PhpSpreadsheet（XLSX）+ 自寫 CSV（UTF-8 BOM、Excel 中文不亂碼） |
-| 測試 | PHPUnit Feature 測試 **52 項全綠**（頁面渲染、點數一致性、角色權限、Portal 存取控制） |
+| 測試 | PHPUnit Feature 測試 **56 項全綠**（頁面渲染、點數一致性、作廢退點、角色權限、Portal 存取控制） |
 
 ## 專案結構
 
@@ -83,7 +83,7 @@ app/
 database/migrations/      # 13 張業務資料表，與 SQLite / PostgreSQL 皆相容
 resources/views/          # Blade 模板（後台 layout + 家長 Portal mobile-first）
 routes/web.php            # 路由（含 /p/{token} Portal 無登入路由）
-tests/Feature/            # PHPUnit Feature 測試 52 項
+tests/Feature/            # PHPUnit Feature 測試 56 項
 ```
 
 ## 資料庫資料表（13 張）
@@ -131,7 +131,7 @@ php artisan serve              # http://localhost:8000
 ## 測試
 
 ```bash
-php artisan test                  # 全部 52 項
+php artisan test                  # 全部 56 項
 php artisan test --filter=Smoke   # 核心商業邏輯 28 項
 ```
 

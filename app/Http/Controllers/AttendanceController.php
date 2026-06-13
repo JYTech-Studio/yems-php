@@ -49,4 +49,22 @@ class AttendanceController extends Controller
 
         return back()->with('scan_result', ['action' => $result['action'], 'message' => $msg]);
     }
+
+    /** 作廢一筆出席紀錄（簽到會退回點數）。僅管理員可用。 */
+    public function cancel(AttendanceRecord $record)
+    {
+        $student = $record->student;
+
+        try {
+            $result = $this->attendance->cancelAttendance($record, auth()->user());
+        } catch (\RuntimeException $e) {
+            return back()->with('scan_error', $e->getMessage());
+        }
+
+        $msg = $result['refunded']
+            ? "↩️ 已作廢 {$student->name} 的簽到，退回 1 點（剩 {$result['credits_remaining']} 點）"
+            : ($result['note'] ?? "已作廢 {$student->name} 的紀錄");
+
+        return back()->with('scan_result', ['action' => 'cancel', 'message' => $msg]);
+    }
 }

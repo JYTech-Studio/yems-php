@@ -64,7 +64,16 @@
                             <div class="font-medium text-gray-800">{{ $rec->student->name }}</div>
                             <div class="text-xs text-gray-400">{{ $rec->enrollment?->course?->name ?? '—' }} · {{ $rec->recorded_at->format('H:i') }}</div>
                         </div>
-                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs {{ $rec->record_type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">{{ $rec->typeLabel() }}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs {{ $rec->record_type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500' }}">{{ $rec->typeLabel() }}</span>
+                            @if (auth()->user()->isAdmin())
+                                <form method="POST" action="{{ route('attendance.cancel', $rec) }}"
+                                      onsubmit="return confirm('確定作廢這筆{{ $rec->typeLabel() }}紀錄？{{ $rec->record_type === 'check_in' ? '已扣的 1 點會退回。' : '' }}')">
+                                    @csrf @method('DELETE')
+                                    <button class="text-xs text-gray-400 hover:text-red-600 transition" title="作廢">作廢</button>
+                                </form>
+                            @endif
+                        </div>
                     </div>
                 @empty
                     <p class="px-6 py-10 text-center text-sm text-gray-400">今天還沒有刷卡紀錄</p>
