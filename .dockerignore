@@ -1,0 +1,20 @@
+# 不要把這些打進映像檔（會在容器內重新產生，或屬於本機機密）
+.git
+.gitignore
+node_modules
+vendor
+.env
+.env.*
+!.env.example
+database/*.sqlite
+database/*.sqlite-journal
+public/build
+public/storage
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests
+.phpunit.result.cache
+README.md
+DEPLOY.md

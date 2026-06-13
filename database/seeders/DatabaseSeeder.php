@@ -20,6 +20,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 已經灌過 demo 資料就跳過（讓部署平台每次重啟都能安全執行 db:seed，不會重複建資料）
+        if (User::where('email', 'admin@demo.com')->exists()) {
+            $this->command?->info('demo 資料已存在，略過 seeding。');
+
+            return;
+        }
+
         $credits = app(CreditService::class);
         $attendance = app(AttendanceService::class);
 
