@@ -19,6 +19,18 @@
 > 這個 Laravel 版把同樣的邏輯搬到 application 層的 **Service 類別 + DB transaction + `lockForUpdate`**，
 > 因此同一套程式碼在本地 **SQLite** 與線上 **PostgreSQL** 都能跑，並保有並發一致性。
 
+## 畫面截圖
+
+> 之後把圖檔放進 `docs/screenshots/`，再把下面註解打開即可顯示。
+
+<!--
+| 總覽 Dashboard | 刷卡點名工作檯 |
+|:---:|:---:|
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Check-in](docs/screenshots/checkin.png) |
+| 點數帳戶 | 家長 Portal（mobile） |
+| ![Credits](docs/screenshots/credits.png) | ![Parent Portal](docs/screenshots/portal.png) |
+-->
+
 ## 功能模組（9 個後台 + 家長 Portal）
 
 | 模組 | 重點 |
@@ -72,7 +84,7 @@ php artisan serve              # http://localhost:8000
 | 家長 | `parent0@demo.com` ~ `parent2@demo.com` | `Demo1234` | （家長走 Portal，見下方）|
 
 **家長 Portal** 走無登入 token 連結，不用帳密。從後台「家長管理」頁可產生 / 複製連結，
-網址形如 `／p/{token}`。本地灌完 seed 後也可在「家長管理」頁直接點進去看。
+網址形如 `/p/{token}`。本地灌完 seed 後也可在「家長管理」頁直接點進去看。
 
 ## 測試
 
