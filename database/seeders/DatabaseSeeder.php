@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
 
         // === 登入帳號 ===
         $admin = User::create([
-            'role' => 'admin', 'name' => '王經元（管理員）',
+            'role' => 'admin', 'name' => '系統管理員',
             'email' => 'admin@demo.com', 'password' => Hash::make('Demo1234'),
         ]);
         $teacher = User::create([
