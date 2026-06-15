@@ -1,6 +1,6 @@
 # ============================================================
 # 補習班管理系統（Laravel）— Render 部署用 Dockerfile
-# 多階段：① Node 編譯前端資產 → ② PHP 8.3 + Apache 跑站
+# 多階段：① Node 編譯前端資產 → ② PHP 8.4 + Apache 跑站
 # ============================================================
 
 # ---------- ① 前端資產（Vite + Tailwind v4）----------
@@ -13,7 +13,7 @@ COPY . .
 RUN npm run build          # 產出 public/build
 
 # ---------- ② PHP 應用 ----------
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # 系統相依：pgsql / zip(phpspreadsheet) / gd(影像) / mbstring
 RUN apt-get update && apt-get install -y --no-install-recommends \
